@@ -1,0 +1,26 @@
+export {
+  recordSpanError,
+  spanErrorAttributes,
+  withSpan,
+  type WithSpanOptions,
+} from "./span.js";
+export {
+  anthropicUsage,
+  createGenAiMetrics,
+  estimateGenAiCostUsd,
+  genAiAttributes,
+  genAiSpanName,
+  openAiUsage,
+  recordGenAiMetrics,
+  recordGenAiUsage,
+  withGenAiSpan,
+  type GenAiCostInput,
+  type GenAiMetricRecorder,
+  type GenAiMetrics,
+  type GenAiOperationName,
+  type GenAiOutputType,
+  type GenAiProviderName,
+  type GenAiSpanConfig,
+  type GenAiTokenType,
+  type GenAiUsage,
+} from "./gen-ai.js";
