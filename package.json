@@ -1,6 +1,6 @@
 {
   "name": "@superlog/otel-helpers",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Tiny TypeScript helpers for native OpenTelemetry spans and GenAI semantic conventions.",
   "type": "module",
   "license": "MIT",
