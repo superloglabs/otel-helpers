@@ -36,6 +36,25 @@ export async function withSpan<TResult>(
   return result as Awaited<TResult>;
 }
 
+export function withSyncSpan<TResult>(
+  name: string,
+  fn: (span: Span) => TResult,
+  options: WithSpanOptions = {},
+): TResult {
+  const { tracer = defaultTracer, attributes, kind = SpanKind.INTERNAL, ...spanOptions } = options;
+
+  return tracer.startActiveSpan(name, { ...spanOptions, attributes, kind }, (span) => {
+    try {
+      const result = fn(span);
+      span.end();
+      return result;
+    } catch (err) {
+      recordSpanError(span, err);
+      throw err;
+    }
+  });
+}
+
 export function recordSpanError(span: Span, err: unknown): void {
   span.recordException(toException(err));
   span.setStatus({ code: SpanStatusCode.ERROR });

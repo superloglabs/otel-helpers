@@ -1,6 +1,6 @@
 import { SpanStatusCode } from "@opentelemetry/api";
 import { describe, expect, it, vi } from "vitest";
-import { recordSpanError, spanErrorAttributes, withSpan } from "../src/index.js";
+import { recordSpanError, spanErrorAttributes, withSpan, withSyncSpan } from "../src/index.js";
 
 describe("span helpers", () => {
   it("records low-cardinality error.type", () => {
@@ -40,6 +40,31 @@ describe("span helpers", () => {
     expect(tracer.startActiveSpan).toHaveBeenCalledWith(
       "work",
       expect.objectContaining({ kind: 0 }),
+      expect.any(Function),
+    );
+    expect(span.end).toHaveBeenCalled();
+  });
+
+  it("runs a synchronous callback using a supplied tracer and ends spans", () => {
+    const span = {
+      end: vi.fn(),
+    };
+    const tracer = {
+      startActiveSpan: vi.fn((_name, _options, fn) => fn(span)),
+    };
+
+    const result = withSyncSpan("work", () => "ok", {
+      attributes: { component: "test" },
+      tracer: tracer as never,
+    });
+
+    expect(result).toBe("ok");
+    expect(tracer.startActiveSpan).toHaveBeenCalledWith(
+      "work",
+      expect.objectContaining({
+        attributes: { component: "test" },
+        kind: 0,
+      }),
       expect.any(Function),
     );
     expect(span.end).toHaveBeenCalled();
