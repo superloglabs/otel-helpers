@@ -3,6 +3,7 @@ import {
   SpanStatusCode,
   trace,
   type Attributes,
+  type AttributeValue,
   type Span,
   type SpanOptions,
   type Tracer,
@@ -42,10 +43,45 @@ export function recordSpanError(span: Span, err: unknown): void {
   span.setAttributes(spanErrorAttributes(err));
 }
 
+export function setSpanAttributesSafe(
+  span: Span,
+  attributes: Record<string, unknown>,
+): number {
+  let count = 0;
+
+  for (const [key, value] of Object.entries(attributes)) {
+    if (!isAttributeValue(value)) continue;
+    span.setAttribute(key, value);
+    count += 1;
+  }
+
+  return count;
+}
+
 export function spanErrorAttributes(err: unknown): Attributes {
   return {
     "error.type": errorType(err),
   };
+}
+
+function isAttributeValue(value: unknown): value is AttributeValue {
+  if (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
+    return true;
+  }
+
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (item) =>
+        typeof item === "string" ||
+        typeof item === "number" ||
+        typeof item === "boolean",
+    )
+  );
 }
 
 function toException(err: unknown): Error {

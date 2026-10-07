@@ -1,6 +1,11 @@
 import { SpanStatusCode } from "@opentelemetry/api";
 import { describe, expect, it, vi } from "vitest";
-import { recordSpanError, spanErrorAttributes, withSpan } from "../src/index.js";
+import {
+  recordSpanError,
+  setSpanAttributesSafe,
+  spanErrorAttributes,
+  withSpan,
+} from "../src/index.js";
 
 describe("span helpers", () => {
   it("records low-cardinality error.type", () => {
@@ -24,6 +29,42 @@ describe("span helpers", () => {
     expect(span.recordException).toHaveBeenCalledWith(err);
     expect(span.setStatus).toHaveBeenCalledWith({ code: SpanStatusCode.ERROR });
     expect(span.setAttributes).toHaveBeenCalledWith({ "error.type": "Error" });
+  });
+
+  it("sets valid span attributes and returns the number set", () => {
+    const span = {
+      setAttribute: vi.fn(),
+    };
+
+    const count = setSpanAttributesSafe(span as never, {
+      string: "value",
+      number: 42,
+      boolean: true,
+      strings: ["one", "two"],
+      numbers: [1, 2],
+      booleans: [true, false],
+    });
+
+    expect(count).toBe(6);
+    expect(span.setAttribute).toHaveBeenCalledTimes(6);
+    expect(span.setAttribute).toHaveBeenCalledWith("string", "value");
+    expect(span.setAttribute).toHaveBeenCalledWith("numbers", [1, 2]);
+  });
+
+  it("drops null, undefined, and invalid attribute values", () => {
+    const span = {
+      setAttribute: vi.fn(),
+    };
+
+    const count = setSpanAttributesSafe(span as never, {
+      null: null,
+      undefined,
+      object: { value: "invalid" },
+      function: () => "invalid",
+    });
+
+    expect(count).toBe(0);
+    expect(span.setAttribute).not.toHaveBeenCalled();
   });
 
   it("runs callback using a supplied tracer and ends spans", async () => {
