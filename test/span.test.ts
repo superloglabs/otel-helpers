@@ -51,16 +51,18 @@ describe("span helpers", () => {
     expect(span.setAttribute).toHaveBeenCalledWith("numbers", [1, 2]);
   });
 
-  it("drops null, undefined, and invalid attribute values", () => {
+  it("drops empty keys, null, undefined, and invalid attribute values", () => {
     const span = {
       setAttribute: vi.fn(),
     };
 
     const count = setSpanAttributesSafe(span as never, {
+      "": "invalid",
       null: null,
       undefined,
       object: { value: "invalid" },
       function: () => "invalid",
+      mixed: ["one", 2],
     });
 
     expect(count).toBe(0);

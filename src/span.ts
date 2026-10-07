@@ -50,7 +50,7 @@ export function setSpanAttributesSafe(
   let count = 0;
 
   for (const [key, value] of Object.entries(attributes)) {
-    if (!isAttributeValue(value)) continue;
+    if (key.length === 0 || !isAttributeValue(value)) continue;
     span.setAttribute(key, value);
     count += 1;
   }
@@ -73,15 +73,19 @@ function isAttributeValue(value: unknown): value is AttributeValue {
     return true;
   }
 
-  return (
-    Array.isArray(value) &&
-    value.every(
-      (item) =>
-        typeof item === "string" ||
-        typeof item === "number" ||
-        typeof item === "boolean",
-    )
-  );
+  if (!Array.isArray(value)) return false;
+  if (value.length === 0) return true;
+
+  const elementType = typeof value[0];
+  if (
+    elementType !== "string" &&
+    elementType !== "number" &&
+    elementType !== "boolean"
+  ) {
+    return false;
+  }
+
+  return value.every((item) => typeof item === elementType);
 }
 
 function toException(err: unknown): Error {
