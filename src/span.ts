@@ -38,7 +38,7 @@ export async function withSpan<TResult>(
 
 export function withSyncSpan<TResult>(
   name: string,
-  fn: (span: Span) => TResult,
+  fn: (span: Span) => TResult extends PromiseLike<unknown> ? never : TResult,
   options: WithSpanOptions = {},
 ): TResult {
   const { tracer = defaultTracer, attributes, kind = SpanKind.INTERNAL, ...spanOptions } = options;
@@ -46,11 +46,15 @@ export function withSyncSpan<TResult>(
   return tracer.startActiveSpan(name, { ...spanOptions, attributes, kind }, (span) => {
     try {
       const result = fn(span);
-      span.end();
+      if (isPromiseLike(result)) {
+        throw new TypeError("withSyncSpan callback returned a Promise; use withSpan instead");
+      }
       return result;
     } catch (err) {
       recordSpanError(span, err);
       throw err;
+    } finally {
+      span.end();
     }
   });
 }
@@ -79,4 +83,12 @@ function errorType(err: unknown): string {
     if (typeof maybeCode === "string" && maybeCode.length > 0) return maybeCode;
   }
   return typeof err;
+}
+
+function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
+  return (
+    (typeof value === "object" || typeof value === "function") &&
+    value !== null &&
+    typeof (value as { then?: unknown }).then === "function"
+  );
 }
