@@ -1,5 +1,6 @@
 export {
   recordSpanError,
+  setSpanAttributesSafe,
   spanErrorAttributes,
   withSpan,
   type WithSpanOptions,
