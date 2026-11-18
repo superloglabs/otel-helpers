@@ -1,6 +1,6 @@
 import { SpanStatusCode } from "@opentelemetry/api";
 import { describe, expect, it, vi } from "vitest";
-import { recordSpanError, spanErrorAttributes, withSpan } from "../src/index.js";
+import { recordSpanError, spanErrorAttributes, withSpan, withSyncSpan } from "../src/index.js";
 
 describe("span helpers", () => {
   it("records low-cardinality error.type", () => {
@@ -42,6 +42,79 @@ describe("span helpers", () => {
       expect.objectContaining({ kind: 0 }),
       expect.any(Function),
     );
+    expect(span.end).toHaveBeenCalled();
+  });
+
+  it("runs a synchronous callback using a supplied tracer and ends spans", () => {
+    const span = {
+      end: vi.fn(),
+    };
+    const tracer = {
+      startActiveSpan: vi.fn((_name, _options, fn) => fn(span)),
+    };
+
+    const result = withSyncSpan("work", () => "ok", {
+      attributes: { component: "test" },
+      tracer: tracer as never,
+    });
+
+    expect(result).toBe("ok");
+    expect(tracer.startActiveSpan).toHaveBeenCalledWith(
+      "work",
+      expect.objectContaining({
+        attributes: { component: "test" },
+        kind: 0,
+      }),
+      expect.any(Function),
+    );
+    expect(span.end).toHaveBeenCalled();
+  });
+
+  it("records errors and ends spans when a synchronous callback throws", () => {
+    const span = {
+      end: vi.fn(),
+      recordException: vi.fn(),
+      setAttributes: vi.fn(),
+      setStatus: vi.fn(),
+    };
+    const tracer = {
+      startActiveSpan: vi.fn((_name, _options, fn) => fn(span)),
+    };
+    const err = new Error("boom");
+
+    expect(() =>
+      withSyncSpan(
+        "work",
+        () => {
+          throw err;
+        },
+        { tracer: tracer as never },
+      ),
+    ).toThrow(err);
+
+    expect(span.recordException).toHaveBeenCalledWith(err);
+    expect(span.setStatus).toHaveBeenCalledWith({ code: SpanStatusCode.ERROR });
+    expect(span.end).toHaveBeenCalled();
+  });
+
+  it("rejects Promise-like callback results and ends spans", () => {
+    const span = {
+      end: vi.fn(),
+      recordException: vi.fn(),
+      setAttributes: vi.fn(),
+      setStatus: vi.fn(),
+    };
+    const tracer = {
+      startActiveSpan: vi.fn((_name, _options, fn) => fn(span)),
+    };
+
+    expect(() =>
+      withSyncSpan("work", (() => Promise.resolve("ok")) as never, {
+        tracer: tracer as never,
+      }),
+    ).toThrow("withSyncSpan callback returned a Promise; use withSpan instead");
+
+    expect(span.setStatus).toHaveBeenCalledWith({ code: SpanStatusCode.ERROR });
     expect(span.end).toHaveBeenCalled();
   });
 });

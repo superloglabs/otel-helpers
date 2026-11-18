@@ -2,6 +2,7 @@ export {
   recordSpanError,
   spanErrorAttributes,
   withSpan,
+  withSyncSpan,
   type WithSpanOptions,
 } from "./span.js";
 export {
